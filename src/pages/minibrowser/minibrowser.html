@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>急速浏览器</title>
+    <!-- Element -->
+    <link rel="stylesheet" href="node_modules/element-ui/lib/theme-chalk/index.css">
+    <!-- Font Awesome -->
+    <link href="../../assets/icon/iconfont.css" rel="stylesheet">
+    <style>
+        html {
+            width: 100%;
+            height: 100%;
+        }
+        
+        body {
+            margin: 0px auto;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .container {
+            margin: 0px auto;
+            height: 100%;
+            width: 100%;
+            display: flex;
+        }
+        
+        .main {
+            border: 1px rgb(120, 120, 120) solid;
+            flex: 1 1 auto;
+            flex-direction: column;
+            background-color: white;
+        }
+        
+        .captionbar {
+            border-bottom: 1px solid rgb(192, 196, 204);
+            padding-left: 8px;
+            height: 70px;
+        }
+        
+        .captionbar-top {
+            height: 8px;
+            /* -webkit-app-region: drag; */
+        }
+        
+        .captionbar-top .el-button {
+            width: 24px;
+            float: right;
+        }
+        
+        webview {
+            top: 72px;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            position: absolute;
+        }
+        
+        .el-tabs__header {
+            margin: 0;
+        }
+        
+        .el-tabs__nav-next,
+        .el-tabs__nav-prev {
+            line-height: 22px;
+            font-size: 12px;
+        }
+        
+        .el-tabs__item {
+            padding: 0 10px;
+            height: 22px;
+            line-height: 22px;
+            font-size: 12px;
+        }
+        
+        .el-button {
+            padding-top: 4px;
+            padding-bottom: 0px;
+        }
+        
+        .el-button+.el-button {
+            margin-left: 0px;
+        }
+        
+        .el-input--mini .el-input__inner {
+            height: 22px;
+        }
+        
+        .nav-tabs {
+            top: 16px;
+            bottom: 34px;
+            left: 68px;
+            right: 72px;
+            position: absolute;
+        }
+        
+        .nav-menu {
+            top: 44px;
+            bottom: 68px;
+            left: 68px;
+            width: 460px;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="container">
+        <div class="main">
+            <div class="captionbar">
+                <div class="captionbar-top" @dblclick="maximizeWindow">
+                    <el-button type="text" icon="el-icon-close" @click="closeWindow"></el-button>
+                    <el-button type="text" icon="el-icon-my-copy-o" @click="maximizeWindow"></el-button>
+                    <el-button type="text" icon="el-icon-minus" @click="minimizeWindow"></el-button>
+                </div>
+                <el-container direction="horizontal">
+                    <div>
+                        <el-button type="text" @click="openByLocal"><img src="../../assets/images/minibrowser/logo.png" class="image"></el-button>
+                    </div>
+                    <el-container direction="vertical">
+                        <div class="nav-tabs" @dblclick="maximizeWindow">
+                            <el-tabs v-model="editableTabsValue" type="card" closable @tab-remove="removeTab" @tab-click="clickTab">
+                                <el-tab-pane v-for="(item, index) in editableTabs" :label="item.title" :name="item.name" :url="item.url">
+                                </el-tab-pane>
+                            </el-tabs>
+                        </div>
+                        <el-row class="nav-menu">
+                            <el-col :span="1">
+                                <el-button type="text" icon="el-icon-my-back-o" @click="goBack"></el-button>
+                            </el-col>
+                            <el-col :span="1">
+                                <el-button type="text" icon="el-icon-my-refresh-o" @click="reloadUrl"></el-button>
+                            </el-col>
+                            <el-col :span="1">
+                                <el-button type="text" icon="el-icon-my-link-o" @click="copyLink"></el-button>
+                            </el-col>
+                            <el-col :span="1">
+                                <el-button type="text" icon="el-icon-my-homepage" @click="goHome"></el-button>
+                            </el-col>
+                            <el-col :span="20">
+                                <el-input size="mini" placeholder="请输入内容" v-model="inputSearch" @keyup.enter.native="startSearch">
+                                    <el-button slot="append" icon="el-icon-search" @click="startSearch"></el-button>
+                                </el-input>
+                            </el-col>
+                        </el-row>
+                    </el-container>
+                </el-container>
+            </div>
+            <!-- <hr align="center" width="100%" color="#987cb9" size="1"> -->
+            <webview id="webview" src="about:blank" partition="feihuo" autosize="on"></webview>
+        </div>
+    </div>
+</body>
+<!-- 先引入 Vue -->
+<script src="scripts/vue.js"></script>
+<!-- 引入组件库 -->
+<script src="node_modules/element-ui/lib/index.js"></script>
+<script>
+    var Header = {
+        data() {
+            return {
+                editableTabsValue: '1',
+                editableTabs: [{
+                    title: '新标签页',
+                    name: '1',
+                    url: ''
+                }],
+                tabIndex: 1,
+                inputSearch: ''
+            }
+        },
+        methods: {
+            addTab(title, url) {
+                //先判断是否存在
+                let bExist = false;
+                let tabs = this.editableTabs;
+                tabs.forEach((tab, index) => {
+                    if (tab.url == url) {
+                        this.editableTabsValue = tabs[index].name; //激活原始标签页
+                        bExist = true;
+                    }
+                });
+
+                //不存在，新增标签页
+                if (!bExist) {
+                    let newTabName = ++this.tabIndex + '';
+                    this.editableTabs.push({
+                        title: title,
+                        name: newTabName,
+                        url: url
+                    });
+                    this.editableTabsValue = newTabName;
+                }
+            },
+            changeTab(title, url) {
+                let bExist = false;
+                let tabs = this.editableTabs;
+                tabs.forEach((tab, index) => {
+                    if (tab.name == this.editableTabsValue) {
+                        tabs[index].title = title;
+                        tabs[index].url = url;
+                        bExist = true;
+                    }
+                });
+
+                //不存在，新增标签页
+                if (!bExist) {
+                    let newTabName = ++this.tabIndex + '';
+                    this.editableTabs.push({
+                        title: title,
+                        name: newTabName,
+                        url: url
+                    });
+                    this.editableTabsValue = newTabName;
+                }
+            },
+            openByLocal() {
+                alert('通过原生应用打开');
+            },
+            clickTab(targetName) {
+                let tabUrl = targetName.$attrs.url;
+                let webViewUrl = window.getCurrentUrl();
+                if (tabUrl != '' && tabUrl != webViewUrl) {
+                    window.loadUrl(tabUrl);
+                }
+            },
+            removeTab(targetName) {
+                let tabs = this.editableTabs;
+                let activeName = this.editableTabsValue;
+                let activeUrl = '';
+                if (activeName === targetName) {
+                    tabs.forEach((tab, index) => {
+                        if (tab.name === targetName) {
+                            let nextTab = tabs[index + 1] || tabs[index - 1];
+                            if (nextTab) {
+                                activeName = nextTab.name;
+                                activeUrl = nextTab.url;
+                            } else {
+                                window.loadUrl(window.getHomeUrl()); //所有标签均关闭时，打开主页
+                            }
+                        }
+                    });
+                }
+
+                this.editableTabsValue = activeName;
+                this.editableTabs = tabs.filter(tab => tab.name !== targetName);
+                if (activeUrl != '') { //切换到当前激活页
+                    window.loadUrl(activeUrl);
+                }
+            },
+            minimizeWindow() {
+                window.onMinimize();
+            },
+            maximizeWindow() {
+                window.onMaximize();
+            },
+            closeWindow() {
+                window.onClose();
+            },
+            reloadUrl() {
+                window.reload();
+            },
+            goHome() {
+                window.loadUrl(window.getHomeUrl());
+            },
+            goBack() {
+                window.goBack();
+            },
+            copyLink() {
+                window.copyLink();
+            },
+            startSearch() {
+                if (this.inputSearch == '') {
+                    window.loadUrl('https://www.so.com/?src=lm&ls=sm2119891&lm_extend=ctype:31');
+                } else {
+                    window.loadUrl('https://www.so.com/s?src=lm&ls=sm2119891&lm_extend=ctype:31&q=' + this.inputSearch);
+                }
+            }
+        }
+    }
+    var TheHeader = Vue.extend(Header)
+    var theHeater = new TheHeader().$mount('#app')
+</script>
+
+</html>

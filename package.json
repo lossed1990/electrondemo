@@ -1,0 +1,9 @@
+{
+    "name": "fhmgame",
+    "version": "1.0.1.1020",
+    "productName": "fhmclt",
+    "main": "src/main.js",
+    "devDependencies": {
+        "electron": "^1.7.9"
+    }
+}
